@@ -7,6 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.BounceButton
 
 @Composable
 fun HomeScreen(
@@ -33,7 +34,7 @@ fun HomeScreen(
                 style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(32.dp))
-            Button(
+            BounceButton(
                 onClick = onLaunchBuiltInGame,
                 modifier = Modifier
                     .fillMaxWidth(0.6f)

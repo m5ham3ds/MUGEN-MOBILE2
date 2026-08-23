@@ -25,6 +25,7 @@ import com.example.engine.MugenParser
 import com.example.storage.MugenMobileStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.ui.utils.bounceClick
 
 @Composable
 fun CharactersScreen(hasPermission: Boolean) {
@@ -107,7 +108,8 @@ fun CharacterCard(character: CharacterData, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.8f),
+            .aspectRatio(0.8f)
+            .bounceClick(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {

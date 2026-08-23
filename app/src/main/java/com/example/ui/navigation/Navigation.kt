@@ -1,6 +1,11 @@
 package com.example.ui.navigation
 
 import android.content.Intent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,7 +32,22 @@ fun AppNavigation(isOnboardingCompleted: Boolean) {
     
     val startDest = if (isOnboardingCompleted) "splash" else "onboarding"
     
-    NavHost(navController = navController, startDestination = startDest) {
+    NavHost(
+        navController = navController, 
+        startDestination = startDest,
+        enterTransition = {
+            slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+        },
+        popEnterTransition = {
+            slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+        }
+    ) {
         composable("onboarding") {
             OnboardingScreen(onComplete = {
                 scope.launch {

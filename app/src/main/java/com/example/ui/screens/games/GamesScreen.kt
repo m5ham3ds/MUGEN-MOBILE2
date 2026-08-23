@@ -22,6 +22,7 @@ import com.example.ui.viewmodels.GameLibraryViewModelFactory
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import com.example.ui.utils.bounceClick
 
 @Composable
 fun GamesScreen(
@@ -100,6 +101,7 @@ fun GameCard(game: GameEntity, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .bounceClick()
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
