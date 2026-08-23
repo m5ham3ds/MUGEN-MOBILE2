@@ -9,10 +9,10 @@ object NativeEngineLoader {
     private const val TAG = "NativeEngineLoader"
     
     // Check if the engine files exist in the user's MUGEN_MOBILE/engine directory
-    // Now it only checks if libikemen.so is available (either bundled or external)
+    // Now it only checks if libmain.so is available (either bundled or external)
     fun hasEngineFiles(): Boolean {
         val engineDir = MugenMobileStorage.engineDir
-        val externalIkemen = File(engineDir, "libikemen.so")
+        val externalIkemen = File(engineDir, "libmain.so")
         return externalIkemen.exists()
     }
 
@@ -38,29 +38,29 @@ object NativeEngineLoader {
             val internalLibDir = context.getDir("ikemen_libs", Context.MODE_PRIVATE)
             val engineDir = MugenMobileStorage.engineDir
             
-            // Look for libikemen.so in external engine directory
-            val externalIkemen = File(engineDir, "libikemen.so")
+            // Look for libmain.so in external engine directory
+            val externalIkemen = File(engineDir, "libmain.so")
             
             if (externalIkemen.exists()) {
-                val internalIkemen = File(internalLibDir, "libikemen.so")
+                val internalIkemen = File(internalLibDir, "libmain.so")
                 if (!internalIkemen.exists() || internalIkemen.length() != externalIkemen.length()) {
-                    Log.d(TAG, "Copying libikemen.so to internal storage...")
+                    Log.d(TAG, "Copying libmain.so to internal storage...")
                     externalIkemen.inputStream().use { fis ->
                         internalIkemen.outputStream().use { fos ->
                             fis.copyTo(fos)
                         }
                     }
                 }
-                Log.d(TAG, "Loading libikemen.so from internal storage...")
+                Log.d(TAG, "Loading libmain.so from internal storage...")
                 System.load(internalIkemen.absolutePath)
                 return Pair(true, "Native engine loaded successfully from external directory!")
             } else {
-                // Try to load bundled libikemen.so if it exists
+                // Try to load bundled libmain.so if it exists
                 try {
-                    System.loadLibrary("ikemen")
+                    System.loadLibrary("main")
                     return Pair(true, "Native engine loaded successfully from APK!")
                 } catch (e: UnsatisfiedLinkError) {
-                    return Pair(false, "libikemen.so not found in APK or ${engineDir.absolutePath}")
+                    return Pair(false, "libmain.so not found in APK or ${engineDir.absolutePath}")
                 }
             }
         } catch (e: SecurityException) {

@@ -35,7 +35,7 @@ import java.nio.charset.StandardCharsets
 
 class MugenGameActivity : SDLActivity() {
     override fun getLibraries(): Array<String> {
-        return arrayOf("ikemen")
+        return arrayOf("main")
     }
 
     override fun loadLibraries() {
@@ -47,7 +47,7 @@ class MugenGameActivity : SDLActivity() {
 
     override fun getMainSharedObject(): String {
         val internalLibDir = getDir("ikemen_libs", android.content.Context.MODE_PRIVATE)
-        val ikemenLib = java.io.File(internalLibDir, "libikemen.so")
+        val ikemenLib = java.io.File(internalLibDir, "libmain.so")
         if (ikemenLib.exists()) return ikemenLib.absolutePath
         
         // Return bundled library path
