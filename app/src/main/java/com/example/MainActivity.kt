@@ -14,6 +14,10 @@ import com.example.ui.theme.MyApplicationTheme
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    
+    // Start recording logs in the background
+    com.example.utils.LogcatRecorder.start(this)
+    
     enableEdgeToEdge()
     setContent {
       MyApplicationTheme {
