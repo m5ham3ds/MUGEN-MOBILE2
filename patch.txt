@@ -1,0 +1,15 @@
+--- app/src/main/java/org/libsdl/app/SDLActivity.java
++++ app/src/main/java/org/libsdl/app/SDLActivity.java
+@@ -724,7 +724,11 @@
+         if (mBasePath.isEmpty()) {
+             mBasePath = getExternalFilesDir(null).getAbsolutePath();
+         }
+-        SDLActivity.nativeOnSDLReady(mBasePath);
++        try {
++            SDLActivity.nativeOnSDLReady(mBasePath);
++        } catch (UnsatisfiedLinkError e) {
++            Log.w("SDLActivity", "nativeOnSDLReady not implemented in this library, skipping");
++        }
+     }
+ 
+     protected void pauseNativeThread() {

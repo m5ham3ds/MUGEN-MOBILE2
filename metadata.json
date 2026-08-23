@@ -1,0 +1,8 @@
+{
+  "name": "MUGEN MOBILE",
+  "description": "A professional Android launcher and IKEMEN GO runtime to play, manage, and customize M.U.G.E.N fighting games with touch support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
