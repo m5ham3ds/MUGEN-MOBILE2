@@ -364,7 +364,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         Log.v(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
 
-        mSharedPrefs = this.getSharedPreferences("prefs", MODE_PRIVATE);
+        mSharedPrefs = this.getSharedPreferences("IkemenGo", MODE_PRIVATE);
 
         try {
             Thread.currentThread().setName("SDLActivity");
@@ -513,10 +513,19 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        // MUGEN MOBILE: Use saved folder from SharedPreferences, or default to MUGEN_MOBILE
-        mBasePath = mSharedPrefs.getString("folder", "");
-        if (mBasePath.isEmpty()) {
-            mBasePath = "/storage/emulated/0/Documents/MUGEN_MOBILE";
+        // MUGEN MOBILE: Handle gamePath from intent
+        String gamePath = intent != null ? intent.getStringExtra("gamePath") : null;
+        if (gamePath != null && !gamePath.isEmpty() && !gamePath.equals("BUILT_IN_ENGINE")) {
+            try {
+                mBasePath = java.net.URLDecoder.decode(gamePath, "UTF-8");
+            } catch (Exception e) {
+                mBasePath = gamePath;
+            }
+        } else {
+            mBasePath = mSharedPrefs.getString("folder", "");
+            if (mBasePath.isEmpty()) {
+                mBasePath = "/storage/emulated/0/Documents/MUGEN_MOBILE";
+            }
         }
         setupContent();
     }
@@ -545,26 +554,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     }
 
     public void checkAndPickFolder() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                // Send user to Settings to grant "All Files Access"
-                try {
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                    intent.addCategory("android.intent.category.DEFAULT");
-                    intent.setData(Uri.parse(String.format("package:%s", getPackageName())));
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Intent intent = new Intent();
-                    intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                    startActivity(intent);
-                }
-            } else {
-                openDirectoryPicker();
-            }
-        } else {
-            // Legacy permissions (Read/Write External) for older Android
-            openDirectoryPicker();
-        }
+        // MUGEN MOBILE: Handled by Compose UI now
     }
 
     public String getFullPathFromTreeUri(Uri treeUri) {
@@ -631,10 +621,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
     }
 
-    public void openDirectoryPicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        startActivityForResult(intent, FOLDER_PICKER_CODE);
-    }
+    // openDirectoryPicker removed for MUGEN MOBILE
 
     private boolean filesNeedUpdate(File baseDir, String[] dirsToCheck) {
         try {
@@ -762,17 +749,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     protected void onResume() {
         Log.v(TAG, "onResume()");
         super.onResume();
-
-        // If we were waiting for the "All Files Access" permission...
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Permission is now granted?
-            if (Environment.isExternalStorageManager()) {
-                // If mBasePath is still empty, let's open the picker now.
-                if (mBasePath == null || mBasePath.isEmpty()) {
-                    openDirectoryPicker();
-                }
-            }
-        }
 
         if (mHIDDeviceManager != null) {
             mHIDDeviceManager.setFrozen(false);
