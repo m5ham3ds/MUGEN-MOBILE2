@@ -13,13 +13,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Download
 import com.example.engine.EngineDataDownloader
 import com.example.engine.DownloadState
-import kotlinx.coroutines.launch
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Folder
+import com.example.data.settings.SettingsDataStore
+import androidx.compose.ui.platform.LocalContext
+import android.net.Uri
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -30,10 +33,35 @@ fun SettingsScreen(
     var vsync by remember { mutableStateOf(true) }
     var useIntegerScaling by remember { mutableStateOf(false) }
     
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val downloadState by EngineDataDownloader.downloadState.collectAsState()
     val progressMessage by EngineDataDownloader.progressMessage.collectAsState()
     val progressPercentage by EngineDataDownloader.progressPercentage.collectAsState()
+    
+    val customGamePath by SettingsDataStore.getCustomGamePath(context).collectAsState(initial = null)
+    var showPathDialog by remember { mutableStateOf(false) }
+    
+    val documentTreeLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let {
+            // Take persistent permission
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            val fullPath = com.example.storage.StorageManager.getFullPathFromTreeUri(context, it)
+            if (fullPath != null) {
+                scope.launch {
+                    SettingsDataStore.setCustomGamePath(context, fullPath)
+                }
+                // Save it for SDLActivity
+                val sharedPrefs = context.getSharedPreferences("IkemenGo", android.content.Context.MODE_PRIVATE)
+                sharedPrefs.edit().putString("folder", fullPath).apply()
+            }
+        }
+    }
     
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -81,6 +109,32 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text("Engine Data", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        item {
+            Card(
+                onClick = { documentTreeLauncher.launch(null) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("Game Directory", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Text(customGamePath ?: "/storage/emulated/0/Documents/MUGEN_MOBILE", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                }
+            }
         }
 
         item {

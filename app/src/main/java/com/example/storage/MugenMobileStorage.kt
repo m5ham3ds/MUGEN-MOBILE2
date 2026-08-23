@@ -4,20 +4,35 @@ import android.os.Environment
 import java.io.File
 
 object MugenMobileStorage {
-    val baseDir: File by lazy {
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MUGEN_MOBILE")
+    private var customBaseDir: File? = null
+
+    fun getBaseDir(context: android.content.Context): File {
+        if (customBaseDir != null) return customBaseDir!!
+        val sharedPrefs = context.getSharedPreferences("IkemenGo", android.content.Context.MODE_PRIVATE)
+        val path = sharedPrefs.getString("folder", "")
+        if (!path.isNullOrEmpty()) {
+            customBaseDir = File(path)
+            return customBaseDir!!
+        }
+        return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MUGEN_MOBILE")
     }
     
-    val charsDir: File by lazy { File(baseDir, "chars") }
-    val stagesDir: File by lazy { File(baseDir, "stages") }
-    val gamesDir: File by lazy { File(baseDir, "games") }
-    val dataDir: File by lazy { File(baseDir, "data") }
-    val fontDir: File by lazy { File(baseDir, "font") }
-    val soundDir: File by lazy { File(baseDir, "sound") }
-    val engineDir: File by lazy { File(baseDir, "engine") }
+    // For legacy compatibility where context is not passed, use the default or custom if initialized
+    val baseDir: File 
+        get() = customBaseDir ?: File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MUGEN_MOBILE")
+    
+    val charsDir: File get() = File(baseDir, "chars")
+    val stagesDir: File get() = File(baseDir, "stages")
+    val gamesDir: File get() = File(baseDir, "games")
+    val dataDir: File get() = File(baseDir, "data")
+    val fontDir: File get() = File(baseDir, "font")
+    val soundDir: File get() = File(baseDir, "sound")
+    val engineDir: File get() = File(baseDir, "engine")
 
-    fun initializeDirectories() {
-        if (!baseDir.exists()) baseDir.mkdirs()
+    fun initializeDirectories(context: android.content.Context? = null) {
+        val currentBaseDir = if (context != null) getBaseDir(context) else baseDir
+        
+        if (!currentBaseDir.exists()) currentBaseDir.mkdirs()
         if (!charsDir.exists()) charsDir.mkdirs()
         if (!stagesDir.exists()) stagesDir.mkdirs()
         if (!gamesDir.exists()) gamesDir.mkdirs()

@@ -345,7 +345,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     };
 
     // Uses folder selection logic if set to true. Set to false for full game scenarios.
-    private final boolean USE_FOLDER_SELECT = true;
+    private final boolean USE_FOLDER_SELECT = false;
 
     // Setup
     @Override
@@ -513,17 +513,12 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        if (USE_FOLDER_SELECT) {
-            mBasePath = mSharedPrefs.getString("folder", "");
-        } else {
-            mBasePath = getExternalFilesDir(null).getAbsolutePath();
-        }
-
+        // MUGEN MOBILE: Use saved folder from SharedPreferences, or default to MUGEN_MOBILE
+        mBasePath = mSharedPrefs.getString("folder", "");
         if (mBasePath.isEmpty()) {
-            checkAndPickFolder();
-        } else {
-            setupContent();
+            mBasePath = "/storage/emulated/0/Documents/MUGEN_MOBILE";
         }
+        setupContent();
     }
 
     @Override
@@ -724,7 +719,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         if (mBasePath.isEmpty()) {
             mBasePath = getExternalFilesDir(null).getAbsolutePath();
         }
-        try { SDLActivity.nativeOnSDLReady(mBasePath); } catch (UnsatisfiedLinkError e) { android.util.Log.w("SDL", "nativeOnSDLReady not found"); }
+        // try { SDLActivity.nativeOnSDLReady(mBasePath); } catch (UnsatisfiedLinkError e) { android.util.Log.w("SDL", "nativeOnSDLReady not found"); }
     }
 
     protected void pauseNativeThread() {

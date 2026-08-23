@@ -35,7 +35,7 @@ import java.nio.charset.StandardCharsets
 
 class MugenGameActivity : SDLActivity() {
     override fun getLibraries(): Array<String> {
-        return emptyArray()
+        return arrayOf("ikemen")
     }
 
     override fun loadLibraries() {
@@ -50,12 +50,7 @@ class MugenGameActivity : SDLActivity() {
         val ikemenLib = java.io.File(internalLibDir, "libikemen.so")
         if (ikemenLib.exists()) return ikemenLib.absolutePath
         
-        // Fallback to finding whatever .so isn't SDL2
-        val files = internalLibDir.listFiles { _, name -> name.endsWith(".so") && !name.contains("SDL2", ignoreCase = true) }
-        if (files != null && files.isNotEmpty()) {
-            return files[0].absolutePath
-        }
-        
+        // Return bundled library path
         return super.getMainSharedObject()
     }
 

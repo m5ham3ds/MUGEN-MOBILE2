@@ -9,4 +9,10 @@ class MugenApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
     val repository by lazy { GameRepository(database.gameDao()) }
     val contentRepository by lazy { ContentRepository(database.contentDao()) }
+
+    override fun onCreate() {
+        super.onCreate()
+        com.example.utils.CrashReporter.initialize(this)
+        com.example.storage.MugenMobileStorage.initializeDirectories(this)
+    }
 }

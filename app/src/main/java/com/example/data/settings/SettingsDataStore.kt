@@ -13,6 +13,23 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 
 object SettingsDataStore {
     private val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+    private val CUSTOM_GAME_PATH = androidx.datastore.preferences.core.stringPreferencesKey("custom_game_path")
+
+    fun getCustomGamePath(context: Context): Flow<String?> {
+        return context.dataStore.data.map { preferences ->
+            preferences[CUSTOM_GAME_PATH]
+        }
+    }
+
+    suspend fun setCustomGamePath(context: Context, path: String?) {
+        context.dataStore.edit { preferences ->
+            if (path == null) {
+                preferences.remove(CUSTOM_GAME_PATH)
+            } else {
+                preferences[CUSTOM_GAME_PATH] = path
+            }
+        }
+    }
 
     fun isOnboardingCompleted(context: Context): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->

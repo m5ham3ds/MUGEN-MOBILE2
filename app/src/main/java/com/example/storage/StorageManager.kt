@@ -27,6 +27,29 @@ object StorageManager {
         context.contentResolver.takePersistableUriPermission(uri, takeFlags)
     }
 
+    fun getFullPathFromTreeUri(context: Context, treeUri: Uri?): String? {
+        if (treeUri == null) return null
+        val treeId = android.provider.DocumentsContract.getTreeDocumentId(treeUri)
+        val split = treeId.split(":")
+        val type = split[0]
+        val path = if (split.size > 1) split[1] else ""
+
+        if ("primary".equals(type, ignoreCase = true)) {
+            return android.os.Environment.getExternalStorageDirectory().toString() + "/" + path
+        } else {
+            val externalDirs = context.getExternalFilesDirs(null)
+            for (f in externalDirs) {
+                if (f != null) {
+                    val absPath = f.absolutePath
+                    if (absPath.contains(type)) {
+                        return absPath.split("/Android/")[0] + "/" + path
+                    }
+                }
+            }
+        }
+        return null
+    }
+
     /**
      * Scans a directory (e.g., a selected MUGEN game folder) to find basic metadata
      * and lists of characters/stages.
