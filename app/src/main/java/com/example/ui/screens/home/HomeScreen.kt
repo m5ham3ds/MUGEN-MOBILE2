@@ -49,7 +49,12 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
             BounceButton(
-                onClick = onLaunchBuiltInGame,
+                onClick = {
+                    val sharedPrefs = context.getSharedPreferences("IkemenGo", android.content.Context.MODE_PRIVATE)
+                    val basePath = MugenMobileStorage.getBaseDir(context).absolutePath
+                    sharedPrefs.edit().putString("folder", basePath).apply()
+                    onLaunchBuiltInGame()
+                },
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
                     .height(64.dp)
