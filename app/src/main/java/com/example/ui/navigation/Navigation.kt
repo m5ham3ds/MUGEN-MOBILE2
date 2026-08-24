@@ -36,16 +36,28 @@ fun AppNavigation(isOnboardingCompleted: Boolean) {
         navController = navController, 
         startDestination = startDest,
         enterTransition = {
-            slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+            androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { 500 },
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300))
         },
         exitTransition = {
-            slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+            androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { -500 },
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
         },
         popEnterTransition = {
-            slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+            androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { -500 },
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300))
         },
         popExitTransition = {
-            slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+            androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { 500 },
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
         }
     ) {
         composable("onboarding") {

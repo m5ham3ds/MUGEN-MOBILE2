@@ -45,15 +45,6 @@ class MugenGameActivity : SDLActivity() {
         }
     }
 
-    override fun getMainSharedObject(): String {
-        val internalLibDir = getDir("ikemen_libs", android.content.Context.MODE_PRIVATE)
-        val ikemenLib = java.io.File(internalLibDir, "libmain.so")
-        if (ikemenLib.exists()) return ikemenLib.absolutePath
-        
-        // Return bundled library path
-        return super.getMainSharedObject()
-    }
-
     override fun getArguments(): Array<String> {
         val intentPath = intent.getStringExtra("gamePath") ?: ""
         val decodedPath = try {
