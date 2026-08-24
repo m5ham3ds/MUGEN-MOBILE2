@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -13,33 +14,27 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 
 object SettingsDataStore {
     private val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
-    private val CUSTOM_GAME_PATH = androidx.datastore.preferences.core.stringPreferencesKey("custom_game_path")
+    private val CUSTOM_GAME_PATH = stringPreferencesKey("custom_game_path")
+    private val LANGUAGE = stringPreferencesKey("language")
+    private val THEME_MODE = stringPreferencesKey("theme_mode")
+    private val PRIMARY_COLOR = stringPreferencesKey("primary_color")
 
-    fun getCustomGamePath(context: Context): Flow<String?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[CUSTOM_GAME_PATH]
-        }
-    }
+    fun getLanguage(context: Context): Flow<String> = context.dataStore.data.map { it[LANGUAGE] ?: "en" }
+    suspend fun setLanguage(context: Context, lang: String) { context.dataStore.edit { it[LANGUAGE] = lang } }
 
+    fun getThemeMode(context: Context): Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "dark" }
+    suspend fun setThemeMode(context: Context, mode: String) { context.dataStore.edit { it[THEME_MODE] = mode } }
+
+    fun getPrimaryColor(context: Context): Flow<String> = context.dataStore.data.map { it[PRIMARY_COLOR] ?: "red" }
+    suspend fun setPrimaryColor(context: Context, color: String) { context.dataStore.edit { it[PRIMARY_COLOR] = color } }
+
+    fun getCustomGamePath(context: Context): Flow<String?> = context.dataStore.data.map { it[CUSTOM_GAME_PATH] }
     suspend fun setCustomGamePath(context: Context, path: String?) {
-        context.dataStore.edit { preferences ->
-            if (path == null) {
-                preferences.remove(CUSTOM_GAME_PATH)
-            } else {
-                preferences[CUSTOM_GAME_PATH] = path
-            }
-        }
+        context.dataStore.edit { if (path == null) it.remove(CUSTOM_GAME_PATH) else it[CUSTOM_GAME_PATH] = path }
     }
 
-    fun isOnboardingCompleted(context: Context): Flow<Boolean> {
-        return context.dataStore.data.map { preferences ->
-            preferences[ONBOARDING_COMPLETED] ?: false
-        }
-    }
-
+    fun isOnboardingCompleted(context: Context): Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_COMPLETED] ?: false }
     suspend fun setOnboardingCompleted(context: Context, completed: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[ONBOARDING_COMPLETED] = completed
-        }
+        context.dataStore.edit { it[ONBOARDING_COMPLETED] = completed }
     }
 }

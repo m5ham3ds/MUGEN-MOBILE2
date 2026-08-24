@@ -14,6 +14,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.ui.components.BounceButton
 import com.example.storage.MugenMobileStorage
+import com.example.ui.theme.LocalAppStrings
 import java.io.File
 
 @Composable
@@ -22,6 +23,8 @@ fun HomeScreen(
     onLaunchBuiltInGame: () -> Unit
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
+    
     var showLogs by remember { mutableStateOf(false) }
     var logContent by remember { mutableStateOf("") }
 
@@ -32,7 +35,7 @@ fun HomeScreen(
         ) {
             if (!hasPermission) {
                 Text(
-                    text = "Storage permission is required to load characters and stages.",
+                    text = strings.storagePermissionRequired,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(16.dp)
@@ -41,7 +44,7 @@ fun HomeScreen(
             }
             
             Text(
-                text = "Ready to Fight!",
+                text = strings.readyToFight,
                 style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -51,7 +54,7 @@ fun HomeScreen(
                     .fillMaxWidth(0.6f)
                     .height(64.dp)
             ) {
-                Text(text = "START", style = MaterialTheme.typography.titleLarge)
+                Text(text = strings.start, style = MaterialTheme.typography.titleLarge)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -60,14 +63,13 @@ fun HomeScreen(
                 val logFile = File(MugenMobileStorage.getBaseDir(context), "mugen_crash.log")
                 logContent = if (logFile.exists()) {
                     val lines = logFile.readLines()
-                    // Get last 150 lines to avoid massive lag
                     lines.takeLast(150).joinToString("\n")
                 } else {
-                    "No crash logs found."
+                    strings.noCrashLogs
                 }
                 showLogs = true
             }) {
-                Text("View Crash Logs")
+                Text(strings.viewCrashLogs)
             }
         }
     }
@@ -79,7 +81,7 @@ fun HomeScreen(
         ) {
             Surface(modifier = Modifier.fillMaxSize().padding(16.dp), shape = MaterialTheme.shapes.medium) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Crash Logs (Last 150 lines)", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.crashLogs, style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = logContent,
@@ -91,7 +93,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = { showLogs = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Close")
+                        Text(strings.close)
                     }
                 }
             }
