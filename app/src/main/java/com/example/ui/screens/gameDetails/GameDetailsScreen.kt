@@ -1,5 +1,6 @@
 package com.example.ui.screens.gameDetails
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,8 +15,6 @@ import com.example.MugenApplication
 import com.example.data.model.ContentEntity
 import com.example.ui.viewmodels.GameDetailsViewModel
 import com.example.ui.viewmodels.GameDetailsViewModelFactory
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,12 +23,7 @@ fun GameDetailsScreen(
     onNavigateBack: () -> Unit,
     onLaunchGame: (String) -> Unit
 ) {
-    val decodedPath = try {
-        URLDecoder.decode(encodedGamePath, StandardCharsets.UTF_8.toString())
-    } catch (e: Exception) {
-        encodedGamePath
-    }
-
+    val decodedPath = Uri.decode(encodedGamePath)
     val context = LocalContext.current
     val application = context.applicationContext as MugenApplication
     val viewModel: GameDetailsViewModel = viewModel(
@@ -58,7 +52,10 @@ fun GameDetailsScreen(
                     }
                 },
                 actions = {
-                    Button(onClick = { onLaunchGame(encodedGamePath) }, modifier = Modifier.padding(end = 8.dp)) {
+                    Button(
+                        onClick = { onLaunchGame(decodedPath) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
                         Text("Play")
                     }
                 },
@@ -80,9 +77,9 @@ fun GameDetailsScreen(
             }
 
             when (selectedTabIndex) {
-                0 -> ContentList(contentList = characters, onToggle = { viewModel.toggleContent(it) })
-                1 -> ContentList(contentList = stages, onToggle = { viewModel.toggleContent(it) })
-                2 -> ContentList(contentList = mods, onToggle = { viewModel.toggleContent(it) })
+                0 -> ContentList(contentList = characters, onToggle = viewModel::toggleContent)
+                1 -> ContentList(contentList = stages, onToggle = viewModel::toggleContent)
+                2 -> ContentList(contentList = mods, onToggle = viewModel::toggleContent)
             }
         }
     }
@@ -99,7 +96,7 @@ fun ContentList(contentList: List<ContentEntity>, onToggle: (ContentEntity) -> U
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(contentList) { content ->
+            items(contentList, key = { it.id }) { content ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),

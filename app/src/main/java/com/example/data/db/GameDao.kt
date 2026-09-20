@@ -16,15 +16,18 @@ interface GameDao {
 
     @Query("SELECT * FROM games WHERE isFavorite = 1 ORDER BY title ASC")
     fun getFavoriteGames(): Flow<List<GameEntity>>
-    
+
     @Query("SELECT * FROM games WHERE title LIKE '%' || :searchQuery || '%' ORDER BY title ASC")
     fun searchGames(searchQuery: String): Flow<List<GameEntity>>
 
     @Query("SELECT * FROM games WHERE folderPath = :folderPath LIMIT 1")
     fun getGameByPath(folderPath: String): Flow<GameEntity?>
 
+    @Query("SELECT * FROM games WHERE folderPath = :folderPath LIMIT 1")
+    suspend fun getGameByPathOnce(folderPath: String): GameEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertGame(game: GameEntity)
+    suspend fun insertGame(game: GameEntity): Long
 
     @Update
     suspend fun updateGame(game: GameEntity)

@@ -11,18 +11,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.MugenApplication
 import com.example.data.model.GameEntity
 import com.example.storage.StorageManager
+import com.example.ui.utils.bounceClick
 import com.example.ui.viewmodels.GameLibraryViewModel
 import com.example.ui.viewmodels.GameLibraryViewModelFactory
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import com.example.ui.utils.bounceClick
 
 @Composable
 fun GamesScreen(
@@ -54,6 +53,10 @@ fun GamesScreen(
         }
     }
 
+    fun launchImportPicker() {
+        if (hasPermission) documentTreeLauncher.launch(null)
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (games.isEmpty()) {
             Column(
@@ -61,12 +64,15 @@ fun GamesScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "No custom games imported.",
+                    text = if (hasPermission) "No custom games imported." else "Storage permission is required to import games.",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { documentTreeLauncher.launch(null) }) {
+                Button(
+                    onClick = ::launchImportPicker,
+                    enabled = hasPermission
+                ) {
                     Text("Import Full Game")
                 }
             }
@@ -76,19 +82,17 @@ fun GamesScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(games) { game ->
-                    GameCard(game = game, onClick = {
-                        val encodedPath = URLEncoder.encode(game.folderPath, StandardCharsets.UTF_8.toString())
-                        onLaunchCustomGame(encodedPath)
-                    })
+                items(games, key = { it.id }) { game ->
+                    GameCard(game = game, onClick = { onLaunchCustomGame(game.folderPath) })
                 }
             }
-            
+
             FloatingActionButton(
-                onClick = { documentTreeLauncher.launch(null) },
+                onClick = ::launchImportPicker,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
+                    .alpha(if (hasPermission) 1f else 0.5f)
             ) {
                 Text("+")
             }
