@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +53,10 @@ fun GamesScreen(
         }
     }
 
+    fun launchImportPicker() {
+        if (hasPermission) documentTreeLauncher.launch(null)
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (games.isEmpty()) {
             Column(
@@ -65,7 +70,7 @@ fun GamesScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { documentTreeLauncher.launch(null) },
+                    onClick = ::launchImportPicker,
                     enabled = hasPermission
                 ) {
                     Text("Import Full Game")
@@ -83,11 +88,11 @@ fun GamesScreen(
             }
 
             FloatingActionButton(
-                onClick = { documentTreeLauncher.launch(null) },
-                enabled = hasPermission,
+                onClick = ::launchImportPicker,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
+                    .alpha(if (hasPermission) 1f else 0.5f)
             ) {
                 Text("+")
             }
