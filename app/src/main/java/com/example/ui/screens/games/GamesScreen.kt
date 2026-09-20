@@ -21,8 +21,6 @@ import com.example.ui.utils.bounceClick
 import com.example.ui.viewmodels.GameLibraryViewModel
 import com.example.ui.viewmodels.GameLibraryViewModelFactory
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun GamesScreen(
@@ -67,7 +65,7 @@ fun GamesScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { if (hasPermission) documentTreeLauncher.launch(null) },
+                    onClick = { documentTreeLauncher.launch(null) },
                     enabled = hasPermission
                 ) {
                     Text("Import Full Game")
@@ -79,16 +77,13 @@ fun GamesScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(games) { game ->
-                    GameCard(game = game, onClick = {
-                        val encodedPath = URLEncoder.encode(game.folderPath, StandardCharsets.UTF_8.toString())
-                        onLaunchCustomGame(encodedPath)
-                    })
+                items(games, key = { it.id }) { game ->
+                    GameCard(game = game, onClick = { onLaunchCustomGame(game.folderPath) })
                 }
             }
 
             FloatingActionButton(
-                onClick = { if (hasPermission) documentTreeLauncher.launch(null) },
+                onClick = { documentTreeLauncher.launch(null) },
                 enabled = hasPermission,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
