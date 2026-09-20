@@ -58,7 +58,10 @@ fun GameDetailsScreen(
                     }
                 },
                 actions = {
-                    Button(onClick = { onLaunchGame(encodedGamePath) }, modifier = Modifier.padding(end = 8.dp)) {
+                    Button(
+                        onClick = { onLaunchGame(decodedPath) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
                         Text("Play")
                     }
                 },

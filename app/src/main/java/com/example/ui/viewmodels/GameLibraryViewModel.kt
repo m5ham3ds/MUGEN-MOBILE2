@@ -16,14 +16,19 @@ class GameLibraryViewModel(
     private val repository: GameRepository,
     private val contentRepository: ContentRepository
 ) : ViewModel() {
-    
+
     val allGames: StateFlow<List<GameEntity>> = repository.allGames.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    fun importGame(title: String, folderPath: String, characters: List<ContentEntity>, stages: List<ContentEntity>) {
+    fun importGame(
+        title: String,
+        folderPath: String,
+        characters: List<ContentEntity>,
+        stages: List<ContentEntity>
+    ) {
         viewModelScope.launch {
             val game = GameEntity(
                 title = title,
@@ -32,15 +37,15 @@ class GameLibraryViewModel(
                 stageCount = stages.size,
                 lastPlayed = System.currentTimeMillis()
             )
-            repository.insertGame(game)
-            
-            // To properly link content to gameId, we fetch it back by path.
-            repository.getGameByPath(folderPath).collect { savedGame ->
-                if (savedGame != null) {
-                    val charsWithId = characters.map { it.copy(gameId = savedGame.id) }
-                    val stagesWithId = stages.map { it.copy(gameId = savedGame.id) }
-                    contentRepository.insertContent(charsWithId + stagesWithId)
-                }
+
+            val insertedId = repository.insertGame(game)
+            val existingGame = repository.getGameByPathOnce(folderPath)
+            val persistedGameId = existingGame?.id ?: insertedId.toInt()
+
+            if (persistedGameId > 0) {
+                val charsWithId = characters.map { it.copy(gameId = persistedGameId) }
+                val stagesWithId = stages.map { it.copy(gameId = persistedGameId) }
+                contentRepository.insertContent(charsWithId + stagesWithId)
             }
         }
     }

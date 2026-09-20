@@ -17,8 +17,12 @@ class GameRepository(private val gameDao: GameDao) {
         return gameDao.getGameByPath(folderPath)
     }
 
-    suspend fun insertGame(game: GameEntity) {
-        gameDao.insertGame(game)
+    suspend fun getGameByPathOnce(folderPath: String): GameEntity? {
+        return gameDao.getGameByPathOnce(folderPath)
+    }
+
+    suspend fun insertGame(game: GameEntity): Long {
+        return gameDao.insertGame(game)
     }
 
     suspend fun updateGame(game: GameEntity) {

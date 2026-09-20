@@ -17,12 +17,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.MugenApplication
 import com.example.data.model.GameEntity
 import com.example.storage.StorageManager
+import com.example.ui.uiutils.bounceClick
 import com.example.ui.viewmodels.GameLibraryViewModel
 import com.example.ui.viewmodels.GameLibraryViewModelFactory
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import com.example.ui.utils.bounceClick
 
 @Composable
 fun GamesScreen(
@@ -83,7 +83,7 @@ fun GamesScreen(
                     })
                 }
             }
-            
+
             FloatingActionButton(
                 onClick = { documentTreeLauncher.launch(null) },
                 modifier = Modifier
