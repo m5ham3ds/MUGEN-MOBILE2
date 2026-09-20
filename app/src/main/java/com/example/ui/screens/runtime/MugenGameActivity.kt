@@ -1,24 +1,32 @@
 package com.example.ui.screens.runtime
 
 import android.content.pm.ActivityInfo
+import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
-import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.example.data.settings.ControllerDataStore
 import com.example.engine.NativeEngineLoader
 import com.example.ui.screens.controllerEditor.ControllerButtonState
@@ -27,16 +35,14 @@ import com.example.ui.screens.controllerEditor.getLabelForId
 import com.example.ui.screens.controllerEditor.getPresetLayout
 import com.example.ui.screens.overlay.GameOverlay
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.libsdl.app.SDLActivity
-import org.libsdl.app.SDL
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
 class MugenGameActivity : SDLActivity() {
-    override fun getLibraries(): Array<String> {
-        return arrayOf("main")
-    }
+    override fun getLibraries(): Array<String> = arrayOf("main")
 
     override fun loadLibraries() {
         val (success, message) = NativeEngineLoader.loadEngine(this)
@@ -47,40 +53,31 @@ class MugenGameActivity : SDLActivity() {
 
     override fun getArguments(): Array<String> {
         val intentPath = intent.getStringExtra("gamePath") ?: ""
-        val decodedPath = try {
-            URLDecoder.decode(intentPath, StandardCharsets.UTF_8.toString())
-        } catch (e: Exception) {
-            intentPath
-        }
-        
-        // Setup any Ikemen-specific arguments if needed here
-        return super.getArguments()
+        val decodedPath = Uri.decode(intentPath)
+        return if (decodedPath.isNotBlank()) arrayOf("gamePath=$decodedPath") else super.getArguments()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // We handle fullscreen and orientation before super
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        
         super.onCreate(savedInstanceState)
-        
-        // Remove standard SDLActivity UI
+
         try {
             mLayout?.removeAllViews()
-        } catch(e: Exception) {}
+        } catch (_: Exception) {
+        }
 
-        // Add our Compose overlay
         val composeView = ComposeView(this).apply {
             setContent {
                 GameScreenOverlay(onExit = { finish() })
             }
         }
-        
-        mLayout?.addView(composeView, ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 
-            ViewGroup.LayoutParams.MATCH_PARENT
-        ))
+
+        mLayout?.addView(
+            composeView,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
     }
 }
 
@@ -90,7 +87,7 @@ fun GameScreenOverlay(onExit: () -> Unit) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.toFloat() * configuration.densityDpi / 160f
     val screenHeight = configuration.screenHeightDp.toFloat() * configuration.densityDpi / 160f
-    
+
     var showOverlay by remember { mutableStateOf(false) }
     var controllerButtons by remember { mutableStateOf<List<ControllerButtonState>>(emptyList()) }
 
@@ -114,8 +111,7 @@ fun GameScreenOverlay(onExit: () -> Unit) {
                     )
                 }
                 controllerButtons = loadedButtons
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (_: Exception) {
             }
         } else {
             controllerButtons = getPresetLayout(ControllerPreset.SIX_BUTTON, screenWidth, screenHeight)
@@ -123,8 +119,6 @@ fun GameScreenOverlay(onExit: () -> Unit) {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
-        
-        // Draw On-Screen Controller
         if (controllerButtons.isNotEmpty()) {
             VirtualController(
                 buttons = controllerButtons,
@@ -143,9 +137,7 @@ fun GameScreenOverlay(onExit: () -> Unit) {
             )
         } else {
             Button(
-                onClick = {
-                    showOverlay = true
-                },
+                onClick = { showOverlay = true },
                 modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
             ) {
                 Text("Menu")
@@ -155,7 +147,7 @@ fun GameScreenOverlay(onExit: () -> Unit) {
         if (showOverlay) {
             GameOverlay(
                 onResume = { showOverlay = false },
-                onExit = { 
+                onExit = {
                     showOverlay = false
                     onExit()
                 }
@@ -165,19 +157,18 @@ fun GameScreenOverlay(onExit: () -> Unit) {
 }
 
 fun buttonIdToKeyCode(id: String): Int {
-    // Android KeyEvent mappings
-    return when(id) {
-        "dpad_up" -> android.view.KeyEvent.KEYCODE_DPAD_UP // 19
-        "dpad_down" -> android.view.KeyEvent.KEYCODE_DPAD_DOWN // 20
-        "dpad_left" -> android.view.KeyEvent.KEYCODE_DPAD_LEFT // 21
-        "dpad_right" -> android.view.KeyEvent.KEYCODE_DPAD_RIGHT // 22
-        "btn_a" -> android.view.KeyEvent.KEYCODE_BUTTON_A // 96
-        "btn_b" -> android.view.KeyEvent.KEYCODE_BUTTON_B // 97
-        "btn_x" -> android.view.KeyEvent.KEYCODE_BUTTON_X // 99
-        "btn_y" -> android.view.KeyEvent.KEYCODE_BUTTON_Y // 100
-        "btn_z" -> android.view.KeyEvent.KEYCODE_BUTTON_Z // 101
-        "btn_c" -> android.view.KeyEvent.KEYCODE_BUTTON_C // 102
-        "btn_start" -> android.view.KeyEvent.KEYCODE_BUTTON_START // 108
+    return when (id) {
+        "dpad_up" -> android.view.KeyEvent.KEYCODE_DPAD_UP
+        "dpad_down" -> android.view.KeyEvent.KEYCODE_DPAD_DOWN
+        "dpad_left" -> android.view.KeyEvent.KEYCODE_DPAD_LEFT
+        "dpad_right" -> android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+        "btn_a" -> android.view.KeyEvent.KEYCODE_BUTTON_A
+        "btn_b" -> android.view.KeyEvent.KEYCODE_BUTTON_B
+        "btn_x" -> android.view.KeyEvent.KEYCODE_BUTTON_X
+        "btn_y" -> android.view.KeyEvent.KEYCODE_BUTTON_Y
+        "btn_z" -> android.view.KeyEvent.KEYCODE_BUTTON_Z
+        "btn_c" -> android.view.KeyEvent.KEYCODE_BUTTON_C
+        "btn_start" -> android.view.KeyEvent.KEYCODE_BUTTON_START
         else -> 0
     }
 }
