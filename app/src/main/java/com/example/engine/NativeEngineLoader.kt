@@ -2,40 +2,41 @@ package com.example.engine
 
 import android.content.Context
 import android.util.Log
+import java.io.File
 
+/** Validates and loads the native engine packaged in the APK. */
 object NativeEngineLoader {
     private const val TAG = "NativeEngineLoader"
-    
-    fun hasEngineFiles(): Boolean {
-        return true
+
+    private val bundledLibraries = listOf(
+        "SDL2", "avutil", "swresample", "swscale",
+        "avcodec", "avformat", "avfilter", "avdevice", "xmp", "main"
+    )
+
+    fun hasEngineFiles(context: Context): Boolean {
+        val nativeDir = context.applicationInfo.nativeLibraryDir ?: return false
+        return bundledLibraries.all { library ->
+            File(nativeDir, System.mapLibraryName(library)).isFile
+        }
     }
 
     fun loadEngine(context: Context): Pair<Boolean, String> {
-        try {
-            Log.d(TAG, "Loading bundled dependencies...")
-            // Load bundled libraries (from jniLibs in APK)
-            val bundledLibs = listOf(
-                "SDL2", "avutil", "swresample", "swscale", 
-                "avcodec", "avformat", "avfilter", "avdevice", "xmp", "main"
-            )
-            
-            for (lib in bundledLibs) {
-                try {
-                    System.loadLibrary(lib)
-                    Log.d(TAG, "Loaded bundled library: lib\${lib}.so")
-                } catch (e: UnsatisfiedLinkError) {
-                    Log.w(TAG, "Could not load bundled library $lib: ${e.message}")
-                    return Pair(false, "Failed to load $lib: ${e.message}")
-                }
+        if (!hasEngineFiles(context)) {
+            return false to "One or more native engine libraries are missing from the APK."
+        }
+
+        return try {
+            bundledLibraries.forEach { library ->
+                System.loadLibrary(library)
+                Log.d(TAG, "Loaded bundled library: lib$library.so")
             }
-            
-            return Pair(true, "Native engine loaded successfully from APK!")
-        } catch (e: SecurityException) {
-            e.printStackTrace()
-            return Pair(false, "Security Error: ${e.message}")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return Pair(false, "Error loading engine: ${e.message}")
+            true to "Native engine loaded successfully from APK."
+        } catch (error: UnsatisfiedLinkError) {
+            Log.e(TAG, "Unable to load native engine", error)
+            false to "Failed to load native library: ${error.message ?: "unknown linker error"}"
+        } catch (error: SecurityException) {
+            Log.e(TAG, "Security policy blocked native engine loading", error)
+            false to "Security error while loading the native engine."
         }
     }
 }

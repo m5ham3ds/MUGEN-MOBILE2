@@ -3,6 +3,7 @@ package com.example.engine
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.example.storage.MugenMobileStorage
 import kotlinx.coroutines.*
@@ -13,193 +14,149 @@ import okhttp3.Request
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.zip.ZipInputStream
 
-enum class DownloadState {
-    IDLE, DOWNLOADING, PAUSED, EXTRACTING, SUCCESS, ERROR
-}
+enum class DownloadState { IDLE, DOWNLOADING, PAUSED, EXTRACTING, SUCCESS, ERROR }
 
 object EngineDataDownloader {
-    private val client = OkHttpClient()
+    private const val TAG = "EngineDataDownloader"
     private const val REPO_ZIP_URL = "https://github.com/m5ham3ds/MUGEN/archive/refs/heads/main.zip"
-    
+
+    private val client = OkHttpClient()
     private val _downloadState = MutableStateFlow(DownloadState.IDLE)
     val downloadState: StateFlow<DownloadState> = _downloadState
-    
     private val _progressMessage = MutableStateFlow("")
     val progressMessage: StateFlow<String> = _progressMessage
-    
     private val _progressPercentage = MutableStateFlow(0f)
     val progressPercentage: StateFlow<Float> = _progressPercentage
 
     private var downloadJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
     @Volatile private var shouldPause = false
     @Volatile private var shouldCancel = false
-    
+
     private fun isInternetAvailable(context: Context): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork = cm.activeNetworkInfo
-        return activeNetwork?.isConnectedOrConnecting == true
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     fun startDownload(context: Context) {
-        val currentState = _downloadState.value
-        if (currentState == DownloadState.DOWNLOADING || currentState == DownloadState.EXTRACTING) return
-        
-        // Check if files already exist (e.g., system.def)
-        MugenMobileStorage.initializeDirectories()
-        val dataDir = MugenMobileStorage.dataDir
-        val testFile = File(dataDir, "system.def")
-        if (testFile.exists()) {
-            _downloadState.value = DownloadState.IDLE
+        if (_downloadState.value == DownloadState.DOWNLOADING || _downloadState.value == DownloadState.EXTRACTING) return
+        MugenMobileStorage.initializeDirectories(context)
+        if (File(MugenMobileStorage.dataDir, "system.def").isFile) {
             _progressMessage.value = "Engine data is already installed."
             return
         }
-
         if (!isInternetAvailable(context)) {
             _downloadState.value = DownloadState.ERROR
             _progressMessage.value = "No internet connection."
             return
         }
-
         shouldPause = false
         shouldCancel = false
-        
         val intent = Intent(context, DownloadService::class.java)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
-        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) context.startForegroundService(intent) else context.startService(intent)
+        downloadJob?.cancel()
+        downloadJob = scope.launch { executeDownload(context.applicationContext) }
+    }
 
-        downloadJob = scope.launch {
-            executeDownload(context)
-        }
-    }
-    
-    fun pauseDownload() {
-        shouldPause = true
-    }
-    
-    fun cancelDownload() {
-        shouldCancel = true
-    }
-    
+    fun pauseDownload() { shouldPause = true }
+    fun cancelDownload() { shouldCancel = true }
+
     private suspend fun executeDownload(context: Context) {
         _downloadState.value = DownloadState.DOWNLOADING
         val zipFile = File(context.cacheDir, "mugen_data.zip")
-        
         try {
-            var downloaded = if (zipFile.exists()) zipFile.length() else 0L
-            
-            val requestBuilder = Request.Builder().url(REPO_ZIP_URL)
-            if (downloaded > 0) {
-                requestBuilder.addHeader("Range", "bytes=$downloaded-")
-            }
-            
-            val response = client.newCall(requestBuilder.build()).execute()
-            
-            if (!response.isSuccessful && response.code != 206) {
-                throw Exception("Server returned ${response.code}")
-            }
-            
-            val body = response.body ?: throw Exception("Empty response body")
-            val contentLength = body.contentLength()
-            val totalLength = if (response.code == 206) downloaded + contentLength else contentLength
-            
-            val fos = FileOutputStream(zipFile, response.code == 206)
-            val inputStream = body.byteStream()
-            val buffer = ByteArray(16 * 1024)
-            var bytesRead: Int
-            
-            while (withContext(Dispatchers.IO) { inputStream.read(buffer) }.also { bytesRead = it } != -1) {
-                if (shouldCancel) {
-                    fos.close()
-                    inputStream.close()
-                    zipFile.delete()
-                    _downloadState.value = DownloadState.IDLE
-                    _progressMessage.value = "Download cancelled."
-                    _progressPercentage.value = 0f
-                    context.stopService(Intent(context, DownloadService::class.java))
-                    return
+            var downloaded = if (zipFile.isFile) zipFile.length() else 0L
+            val request = Request.Builder().url(REPO_ZIP_URL).apply {
+                if (downloaded > 0L) header("Range", "bytes=$downloaded-")
+            }.build()
+            client.newCall(request).execute().use { response ->
+                val resumed = downloaded > 0L
+                if (!response.isSuccessful || (resumed && response.code != 206)) {
+                    if (resumed && response.code == 200) {
+                        zipFile.delete()
+                        downloaded = 0L
+                    } else throw IOException("Server returned HTTP ${response.code}")
                 }
-                if (shouldPause) {
-                    fos.close()
-                    inputStream.close()
-                    _downloadState.value = DownloadState.PAUSED
-                    _progressMessage.value = "Download paused."
-                    return
-                }
-                
-                fos.write(buffer, 0, bytesRead)
-                downloaded += bytesRead
-                
-                if (totalLength > 0L) {
-                    _progressPercentage.value = downloaded.toFloat() / totalLength.toFloat()
-                    _progressMessage.value = "Downloading: ${downloaded / 1024 / 1024} MB / ${totalLength / 1024 / 1024} MB"
-                } else {
-                    _progressMessage.value = "Downloading: ${downloaded / 1024 / 1024} MB"
+                if (downloaded == 0L && response.code != 200) throw IOException("Unexpected HTTP ${response.code}")
+                val body = response.body ?: throw IOException("Empty response body")
+                val contentLength = body.contentLength()
+                val totalLength = if (response.code == 206) downloaded + contentLength else contentLength
+                FileOutputStream(zipFile, response.code == 206).use { output ->
+                    body.byteStream().use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            if (shouldCancel) { zipFile.delete(); setCancelled(context); return }
+                            if (shouldPause) { _downloadState.value = DownloadState.PAUSED; _progressMessage.value = "Download paused."; return }
+                            val count = input.read(buffer)
+                            if (count == -1) break
+                            output.write(buffer, 0, count)
+                            downloaded += count
+                            if (totalLength > 0) _progressPercentage.value = downloaded.toFloat() / totalLength
+                            _progressMessage.value = "Downloading: ${downloaded / 1024 / 1024} MB"
+                        }
+                    }
                 }
             }
-            
-            fos.close()
-            inputStream.close()
-            
             extractZip(zipFile, context)
-            
-        } catch (e: Exception) {
-            Log.e("EngineDataDownloader", "Error", e)
+        } catch (error: Exception) {
+            Log.e(TAG, "Download failed", error)
             _downloadState.value = DownloadState.ERROR
-            _progressMessage.value = "Error: ${e.localizedMessage}"
+            _progressMessage.value = "Error: ${error.localizedMessage ?: "download failed"}"
             context.stopService(Intent(context, DownloadService::class.java))
         }
     }
-    
+
+    private fun setCancelled(context: Context) {
+        _downloadState.value = DownloadState.IDLE
+        _progressMessage.value = "Download cancelled."
+        _progressPercentage.value = 0f
+        context.stopService(Intent(context, DownloadService::class.java))
+    }
+
     private suspend fun extractZip(zipFile: File, context: Context) {
         _downloadState.value = DownloadState.EXTRACTING
-        _progressMessage.value = "Extracting files to data/..."
-        _progressPercentage.value = 0f
-        
+        _progressMessage.value = "Extracting files to data..."
         withContext(Dispatchers.IO) {
             try {
-                MugenMobileStorage.initializeDirectories()
-                val dataDir = MugenMobileStorage.dataDir
-                
-                ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zis ->
-                    var entry = zis.nextEntry
+                val dataDir = MugenMobileStorage.dataDir.apply { mkdirs() }
+                val root = dataDir.canonicalFile
+                ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zip ->
+                    var entry = zip.nextEntry
                     while (entry != null) {
-                        val fileName = entry.name
-                        
-                        val parts = fileName.split("/")
-                        if (parts.size > 1 && !entry.isDirectory) {
-                            val actualFileName = parts.last()
-                            val outFile = File(dataDir, actualFileName)
-                            
-                            FileOutputStream(outFile).use { fos ->
-                                zis.copyTo(fos)
+                        if (!entry.isDirectory) {
+                            val relativeName = entry.name.replace('\\', '/')
+                            val destination = File(root, relativeName).canonicalFile
+                            val rootPath = root.path + File.separator
+                            if (destination.path != root.path && !destination.path.startsWith(rootPath)) {
+                                throw SecurityException("Unsafe ZIP entry: ${entry.name}")
                             }
+                            destination.parentFile?.mkdirs()
+                            FileOutputStream(destination).use { output -> zip.copyTo(output) }
                         }
-                        zis.closeEntry()
-                        entry = zis.nextEntry
+                        zip.closeEntry()
+                        entry = zip.nextEntry
                     }
                 }
-                
-                zipFile.delete() // Cleanup
+                zipFile.delete()
+                _progressPercentage.value = 1f
                 _downloadState.value = DownloadState.SUCCESS
                 _progressMessage.value = "Engine data successfully installed!"
                 context.stopService(Intent(context, DownloadService::class.java))
-                
-            } catch (e: Exception) {
-                Log.e("EngineDataDownloader", "Extract Error", e)
+            } catch (error: Exception) {
+                Log.e(TAG, "Extraction failed", error)
                 _downloadState.value = DownloadState.ERROR
-                _progressMessage.value = "Extract Error: ${e.localizedMessage}"
+                _progressMessage.value = "Extract error: ${error.localizedMessage ?: "invalid archive"}"
                 context.stopService(Intent(context, DownloadService::class.java))
             }
         }
     }
-    
+
     fun reset() {
         _downloadState.value = DownloadState.IDLE
         _progressMessage.value = ""
