@@ -17,7 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.MugenApplication
 import com.example.data.model.GameEntity
 import com.example.storage.StorageManager
-import com.example.ui.uiutils.bounceClick
+import com.example.ui.utils.bounceClick
 import com.example.ui.viewmodels.GameLibraryViewModel
 import com.example.ui.viewmodels.GameLibraryViewModelFactory
 import kotlinx.coroutines.launch
@@ -61,12 +61,15 @@ fun GamesScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "No custom games imported.",
+                    text = if (hasPermission) "No custom games imported." else "Storage permission is required to import games.",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { documentTreeLauncher.launch(null) }) {
+                Button(
+                    onClick = { if (hasPermission) documentTreeLauncher.launch(null) },
+                    enabled = hasPermission
+                ) {
                     Text("Import Full Game")
                 }
             }
@@ -85,7 +88,8 @@ fun GamesScreen(
             }
 
             FloatingActionButton(
-                onClick = { documentTreeLauncher.launch(null) },
+                onClick = { if (hasPermission) documentTreeLauncher.launch(null) },
+                enabled = hasPermission,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
